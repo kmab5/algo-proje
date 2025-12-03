@@ -2,8 +2,8 @@
 #include "raylib.h"
 
 // Constants
-const int screenWidth = 800;
-const int screenHeight = 450;
+const int screenWidth = 1000;
+const int screenHeight = 1000;
 
 
 // Function prototypes
@@ -11,7 +11,8 @@ static void UpdateDrawFrame(void); // Update and draw one frame
 
 
 // Local variables
-
+int gravity = 10;
+char* name = "Nasim Muhtasebzada";
 
 int main() {
 
@@ -32,6 +33,7 @@ static void UpdateDrawFrame(void) {
     BeginDrawing();
         ClearBackground(RAYWHITE);
         DrawText("This is a raylib example", 10, 40, 20, DARKGRAY);
+        DrawText(name, 10, 100, 20, DARKGRAY);
         DrawFPS(10, 10);
     EndDrawing();
 }
