@@ -17,6 +17,17 @@
 #define HARD (float)(tileHeight / 15.0f)
 #define HIGHTSCORE_FILE "hightscore.dat"
 
+// TODO List
+// README :IMPORTANT
+// Sort scores :IMPORTANT
+// Store more (10) scores :IMPORTANT
+// Add songs in the background
+// Pulse the letters when clicked
+// Blow up tiles when clicked
+// Add notes to tiles
+// Avatar in the corner shouting when u score a point
+// Song guided tile generation
+
 // HIGHTSCORE
 //1- to load
 int loadHightscore(void){
@@ -62,14 +73,15 @@ typedef enum GameState {
     PLAYING, PAUSE, END
 } GameState;
 
-// Rounds | EASY = 25 | MEDIUM = 50 | HARD > 50
+// Rounds | EASY = 50 | MEDIUM = 100 | HARD > 50
 typedef enum Round {
-    ROUND_1 = 25, ROUND_2 = 50
+    ROUND_1 = 50, ROUND_2 = 100
 } Round;
 
 // Game instance
 typedef struct Game {
     int score;
+    int highscore;
     float theLine;
     Tile tiles[tileNumber];
     float speed;
@@ -82,7 +94,7 @@ typedef struct Game {
 static void GameInit(Game *game); // Initialize game stats
 static void UpdateGame(Game *game); // Update game physics
 static void DrawFrame(Game *game); // Update and draw one frame
-static void GenerateTile(Game *game, int prev); // Generate tile in one of four collumns
+static void GenerateRandomTile(Game *game, int prev); // Generate tile in one of four collumns
 static void CheckTilesOutsideScreen(Game *game); // Check if each tile is outside of the screen or near the line
 
 // Main entry point
@@ -111,7 +123,7 @@ int main() {
 static void GameInit(Game *game) {
     game->score = 0;
     game->speed = EASY;
-    game->theLine = screenHeight - tileHeight;
+    game->theLine = screenHeight - tileHeight * 1.2;
     for(int i = 0; i < tileNumber; i++) {
         game->tiles[i] = (Tile){
             GetRandomValue(0, 3),
@@ -122,12 +134,12 @@ static void GameInit(Game *game) {
     game->gameState = PLAYING;
     game->generated = 0;
     game->scored = 0;
-    GenerateTile(game, GetRandomValue(0, 3));
-
+    GenerateRandomTile(game, GetRandomValue(0, 3));
+    game->highscore = loadHightscore();
 }
 
 // Generate tile in one of four collumns
-static void GenerateTile(Game *game, int prev) {
+static void GenerateRandomTile(Game *game, int prev) {
     int col = GetRandomValue(0, 3);
     if(col == prev) col = (col + 1) % 4;
     Tile tile = {
@@ -180,6 +192,8 @@ static void CheckTile(Game* game, int col) {
         game->tiles[bestIndex].active = false;
         game->tiles[bestIndex].y = -tileHeight;
         game->scored++;
+    } else {
+        game->gameState = END;
     }
 }
 
@@ -191,7 +205,7 @@ static void CheckTilesOutsideScreen(Game* game) {
             if(game->tiles[i].y > screenHeight) {
                 game->gameState = END;
                 // TODO: Game over functions, high score stuff
-
+                game->highscore = updateHigthscore(game->score, game->highscore);
             }
         }
     }
@@ -212,13 +226,19 @@ static void UpdateGame(Game *game) {
             CheckTile(game, 2);
         } else if(IsKeyPressed(KEY_L)) { // Column 3
             CheckTile(game, 3);
+        } else if(IsKeyPressed(KEY_SPACE)) { // Pause Game
+            game->gameState = PAUSE;
         }
 
         for(int i = 0; i < tileNumber; i++) {
             if(game->tiles[i].active)  game->tiles[i].y += game->speed;
-            if(game->tiles[i].y == 0 || (game->scored == ROUND_1 && game->generated == ROUND_1) || (game->scored == ROUND_2 && game->generated == ROUND_2)) GenerateTile(game, game->tiles[i].column);
+            if(game->tiles[i].y == 0 || (game->scored == ROUND_1 && game->generated == ROUND_1) || (game->scored == ROUND_2 && game->generated == ROUND_2)) GenerateRandomTile(game, game->tiles[i].column);
         }
         CheckTilesOutsideScreen(game);
+    } else {
+        if(IsKeyPressed(KEY_SPACE)) { // Pause Game
+            game->gameState = PLAYING;
+        }
     }
 } 
 
@@ -232,7 +252,7 @@ static void DrawFrame(Game *game) {
         DrawLine(0, game->theLine, screenWidth, game->theLine, BLACK);
 
         // If playing
-        if(game->gameState == PLAYING) {
+        if(game->gameState == PLAYING || game->gameState == PAUSE) {
             // Draw Tiles
             for(int i = 0; i < tileNumber; i++) {
                 if(game->tiles[i].active) {
@@ -249,11 +269,20 @@ static void DrawFrame(Game *game) {
             // Draw score
             DrawText(TextFormat("Score: %d", game->score), 10, 10, 40, GREEN);
             DrawText(TextFormat("Scored: %d", game->scored), 10, 60, 20, GOLD);
+
+            if(game->gameState == PAUSE) {
+                DrawRectangle(0, 0, screenWidth, screenHeight, Fade(GRAY, 0.8f));
+                DrawText("PAUSED!", screenWidth / 2 - MeasureText("PAUSED!", 40) / 2, screenHeight / 2 - 20, 40, BLACK);
+                DrawText("Press SPACE to resume!", screenWidth / 2 - MeasureText("Press SPACE to resume!", 20) / 2, screenHeight / 2 + 30, 20, BLACK);
+            }
         }
-        // } else if(game->gameState == PAUSE) {
         else {
             DrawRectangle(0, 0, screenWidth, screenHeight, Fade(GRAY, 0.6f));
-            DrawText("Game Over!", screenWidth / 2 - MeasureText("Game Over!", 40) / 2, screenHeight / 2 - 20, 40, RED);
+            DrawRectangle(0, screenHeight / 2 - 60, screenWidth, 190, Fade(WHITE, 0.9f));
+            DrawText("Game Over!", screenWidth / 2 - MeasureText("Game Over!", 40) / 2, screenHeight / 2 - 40, 40, RED);
+            DrawText("Press R to restart", screenWidth / 2 - MeasureText("Press R to restart", 20) / 2, screenHeight / 2 + 10, 20, BLACK);
+            DrawText(TextFormat("Score: %d", game->score), screenWidth / 2 - MeasureText(TextFormat("Score: %d", game->score), 30) / 2, screenHeight / 2 + 40, 30, ORANGE);
+            DrawText(TextFormat("Highscore: %d", game->highscore), screenWidth / 2 - MeasureText(TextFormat("Highscore: %d", game->highscore), 30) / 2, screenHeight / 2 + 80, 30, ORANGE);
         }
     EndDrawing();
 }
