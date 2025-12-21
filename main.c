@@ -8,14 +8,15 @@
 // Constants
 #define screenWidth 600
 #define screenHeight 960
-#define columns 4
-#define tileNumber 100
+#define columns 4 // ERROR: Unimplemented with controls (Controls only work for 4 columns)
+#define tileNumber 50 // For more optimized numbering, use (screenHeight / tileHeight) + 3 - max number of tiles in the screen + 1 above, 1 below it
 #define tileSize (screenWidth / columns)
-#define tileHeight tileSize * 1.5f
-#define EASY (float)(tileHeight / 25.0f)
-#define MEDIUM (float)(tileHeight / 20.0f)
-#define HARD (float)(tileHeight / 15.0f)
-#define HIGHTSCORE_FILE "highscore.dat"
+#define tileHeight tileSize * 1.5f // Height of tiles 1.5 * the width
+#define baseSpeed 20.0f // The higher the value the slower the pace
+#define EASY (float)(tileHeight / (baseSpeed + 10))
+#define MEDIUM (float)(tileHeight / (baseSpeed + 5))
+#define HARD (float)(tileHeight / baseSpeed)
+#define HIGHSCORE_FILE "highscore.dat"
 
 // TODO List
 // README :IMPORTANT
@@ -46,7 +47,14 @@ typedef enum Round {
     ROUND_1 = 50, ROUND_2 = 100
 } Round;
 
-// Game instance | score (int) | highscore (int) | theLine (float - y coord) | tiles (Tiles[]) | speed (float - EASY/MEDIUM/HARD) | generated (int) | scored (int) | gameState (PLAYING/PAUSE/END)
+// Pulse | life (float) | color (Color) | active (bool)
+typedef struct Pulse {
+    float life;
+    Color color;
+    bool active;
+} Pulse;
+
+// Game instance | score (int) | highscore (int) | theLine (float - y coord) | tiles (Tiles[]) | speed (float - EASY/MEDIUM/HARD) | generated (int) | scored (int) | gameState (PLAYING/PAUSE/END) | pulses (Pulse[5] - a, s, k, l, Notification)
 typedef struct Game {
     int score;
     int highscore;
@@ -55,24 +63,20 @@ typedef struct Game {
     float speed;
     int generated;
     int scored;
+    Pulse pulses[5];
     GameState gameState;
 } Game;
 
-// Pulse | life (float) | color (Color)
-typedef struct Pulse {
-    float life;
-    Color color;
-} Pulse;
-
 // Function prototypes
 static void GameInit(Game *game); // Initialize game stats
+static void GameEnd(Game *game); // End game
 static void UpdateGame(Game *game); // Update game physics
 static void DrawFrame(Game *game); // Update and draw one frame
 static void GenerateRandomTile(Game *game, int prev); // Generate tile in one of four collumns
 static void CheckTilesOutsideScreen(Game *game); // Check if each tile is outside of the screen or near the line
-static int loadHighscore(void); // Load highscore
-static void saveHighscore(int hightscore); // Save highscore into file
-static int updateHighscore(int score, int highscore); // Update the highscore
+int loadHighscore(void); // Load highscore
+void saveHighscore(int hightscore); // Save highscore into file
+int updateHighscore(int score, int highscore); // Update the highscore
 
 // Main entry point
 int main() {
@@ -93,21 +97,21 @@ int main() {
 
 // Fonksiyonlar
 // Load highscore
-static int loadHighscore(void) {
+int loadHighscore(void) {
     FILE *file;
     int highscore = 0;
-    file = fopen (HIGHTSCORE_FILE, "r");
+    file = fopen(HIGHSCORE_FILE, "r");
     if(file != NULL){
         fscanf(file, "%d", &highscore);
-        fclose(file);
     }
+    fclose(file);
     return highscore;
 }
 
 // Save highscore
-static void saveHighscore(int highscore) {
+void saveHighscore(int highscore) {
     FILE *file;
-    file = fopen (HIGHTSCORE_FILE, "w");
+    file = fopen (HIGHSCORE_FILE, "w");
     if(file != NULL){
         fprintf(file, "%d", highscore);
         fclose(file);
@@ -115,7 +119,7 @@ static void saveHighscore(int highscore) {
 }
 
 // Update highscore
-static int updateHighscore(int score, int highscore) {
+int updateHighscore(int score, int highscore) {
     if(score > highscore){
         highscore = score;
         saveHighscore(highscore);
@@ -136,10 +140,17 @@ static void GameInit(Game *game) {
         };
     }
     game->gameState = PLAYING;
+    for(int i = 0; i < 5; i++) game->pulses[i] = (Pulse){0.0f, BLACK, false};
     game->generated = 0;
     game->scored = 0;
     GenerateRandomTile(game, GetRandomValue(0, 3));
     game->highscore = loadHighscore();
+}
+
+// Game over functions, update high score
+static void GameEnd(Game *game) {
+    game->gameState = END;
+    game->highscore = updateHighscore(game->score, game->highscore);
 }
 
 // Generate tile in one of four collumns
@@ -182,15 +193,24 @@ static void CheckTile(Game* game, int col) {
         }
     }
     if(bestIndex != -1) {
-        if(bestDistance < (float)(tileHeight) * 0.2f || bestDistance > (float)(tileHeight) * 0.8f) game->score += 3; // 3 pts if tile is [0, 20] & [80, 100]% close
-        else if(bestDistance < (float)(tileHeight) * 0.4f || bestDistance > (float)(tileHeight) * 0.6f) game->score += 6; // 6 pts if tile is [20, 40] & [60, 80]% close
-        else game->score += 10; // 10 pts if tile is [40 - 60]% close
+        if(bestDistance < (float)(tileHeight) * 0.2f || bestDistance > (float)(tileHeight) * 0.8f) {
+            game->pulses[4] = (Pulse){1.1f, GOLD, true};
+            game->score += 3;
+        } // Good: 3 pts if tile is [0, 20] & [80, 100]% close
+        else if(bestDistance < (float)(tileHeight) * 0.4f || bestDistance > (float)(tileHeight) * 0.6f) {
+            game->pulses[4] = (Pulse){1.1f, DARKBLUE, true};
+            game->score += 6;
+        } // Great: 6 pts if tile is [20, 40] & [60, 80]% close
+        else {
+            game->pulses[4] = (Pulse){1.1f, GREEN, true};
+            game->score += 10;
+        } // Perfect: 10 pts if tile is [40 - 60]% close
 
         game->tiles[bestIndex].active = false;
         game->tiles[bestIndex].y = -tileHeight;
         game->scored++;
     } else { // End game if wrong button clicked or timing is wrong
-        game->gameState = END;
+        GameEnd(game);
     }
 }
 
@@ -199,11 +219,7 @@ static void CheckTilesOutsideScreen(Game* game) {
     for (int i = 0; i < tileNumber; i++) {
         if(game->tiles[i].active) {
             // Game over state
-            if(game->tiles[i].y > screenHeight) {
-                game->gameState = END;
-                // Game over functions, update high score
-                game->highscore = updateHighscore(game->score, game->highscore);
-            }
+            if(game->tiles[i].y > screenHeight) GameEnd(game);
         }
     }
 }
@@ -216,15 +232,28 @@ static void UpdateGame(Game *game) {
         }
     } else if(game->gameState == PLAYING) {
         if(IsKeyPressed(KEY_A)) { // Column 0
+            game->pulses[0] = (Pulse){1.0f, GREEN, true};
             CheckTile(game, 0);
         } else if(IsKeyPressed(KEY_S)) { // Column 1
+            game->pulses[1] = (Pulse){1.0f, BLUE, true};
             CheckTile(game, 1);
         } else if(IsKeyPressed(KEY_K)) { // Column 2
+            game->pulses[2] = (Pulse){1.0f, PINK, true};
             CheckTile(game, 2);
         } else if(IsKeyPressed(KEY_L)) { // Column 3
+            game->pulses[3] = (Pulse){1.0f, ORANGE, true};
             CheckTile(game, 3);
         } else if(IsKeyPressed(KEY_SPACE)) { // Pause Game
             game->gameState = PAUSE;
+        }
+
+        // Update pulses
+        for(int i = 0; i < 5; i++) if(game->pulses[i].active) {
+            game->pulses[i].life -= GetFrameTime();
+            if(game->pulses[i].life <= 0) {
+                game->pulses[i].life = 0.0f;
+                game->pulses[i].active = false;
+            }
         }
 
         for(int i = 0; i < tileNumber; i++) {
@@ -236,7 +265,7 @@ static void UpdateGame(Game *game) {
         }
         CheckTilesOutsideScreen(game);
     } else {
-        if(IsKeyPressed(KEY_SPACE)) { // Pause Game
+        if(IsKeyPressed(KEY_SPACE)) { // Resume Game
             game->gameState = PLAYING;
         }
     }
@@ -261,14 +290,22 @@ static void DrawFrame(Game *game) {
             }
 
             // Draw Controls
-            DrawText("a", tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(BLACK, 0.7f));
-            DrawText("s", tileSize + tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(BLACK, 0.7f));
-            DrawText("k", tileSize * 2 + tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(BLACK, 0.7f));
-            DrawText("l", tileSize * 3 + tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(BLACK, 0.7f));
+            // Reappearing Letters: (game->pulses[0].active ? Fade(game->pulses[0].color, game->pulses[0].life + 0.2f) : Fade(BLACK, 0.7f))
+            DrawText("a", tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(game->pulses[0].color, game->pulses[0].life + 0.2f));
+            DrawText("s", tileSize + tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(game->pulses[1].color, game->pulses[1].life + 0.2f));
+            DrawText("k", tileSize * 2 + tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(game->pulses[2].color, game->pulses[2].life + 0.2f));
+            DrawText("l", tileSize * 3 + tileSize / 4, screenHeight - tileSize, tileSize / 2, Fade(game->pulses[3].color, game->pulses[3].life + 0.2f));
             
             // Draw score
             DrawText(TextFormat("Score: %d", game->score), 10, 10, 40, GREEN);
-            DrawText(TextFormat("Scored: %d", game->scored), 10, 60, 20, GOLD);
+
+            // Draw achievement
+            if(game->pulses[4].active) {
+                if(ColorIsEqual(game->pulses[4].color, GOLD)) DrawText("Good!", 10, 60, 30, Fade(game->pulses[4].color, game->pulses[4].life));
+                else if(ColorIsEqual(game->pulses[4].color, DARKBLUE)) DrawText("Great!", 10, 60, 35, Fade(game->pulses[4].color, game->pulses[4].life));
+                else DrawText("Perfect!", 10, 60, 40, Fade(game->pulses[4].color, game->pulses[4].life));
+            }
+            
 
             if(game->gameState == PAUSE) {
                 DrawRectangle(0, 0, screenWidth, screenHeight, Fade(GRAY, 0.8f));
