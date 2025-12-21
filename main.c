@@ -24,16 +24,22 @@
 // Add songs in the background
 // [DONE] Pulse the letters when clicked
 // Blow up tiles when clicked
-// Add notes to tiles
+// [WIP] Add notes to tiles - Download notes, load notes in one array (in order of Note enum), initialize with Tile, everytime it is click, play the note
 // Avatar in the corner shouting when u score a point
 // Song guided tile generation
 
 // Structs
+// Note | C - 0, C#, D, D#, E, E#, F, G, G#, A, A#, B
+typedef enum Note {
+    C, Cs, D, Ds, E, Es, F, G, Gs, A, As, B
+} Note;
+
 // Tile | column - 0, 1, 2, 3 | y - y coordinate | active - true/false
 typedef struct Tile {
     int column;
     float y;
     bool active;
+    Note note;
 } Tile;
 
 // Game State Enum | PLAYING = 0 | PAUSE = 1 | END = 2
