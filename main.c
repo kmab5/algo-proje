@@ -58,6 +58,12 @@ typedef struct Game {
     GameState gameState;
 } Game;
 
+// Pulse | life (float) | color (Color)
+typedef struct Pulse {
+    float life;
+    Color color;
+} Pulse;
+
 // Function prototypes
 static void GameInit(Game *game); // Initialize game stats
 static void UpdateGame(Game *game); // Update game physics
