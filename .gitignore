@@ -1,6 +1,7 @@
 # Project Files
 *.dat
 .prettierignore
+*.zip
 
 # Prerequisites
 *.d
