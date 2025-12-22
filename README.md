@@ -24,6 +24,28 @@ Oyuncular, karoya ne kadar doğru zamanda vururlarsa o kadar yüksek puan alır:
 
 Karo ekranın dışına çıkarsa veya yanlış tuşa basılırsa oyun sona erer.
 
+### Oyun Modları
+
+Oyun farklı ses modları ile oynanabilir:
+
+| Mod | Açıklama |
+| --- | -------- |
+| **RANDOM** | Her karoya tıklandığında rastgele piyano notası çalar |
+| **SONGONLY** | Arka planda müzik çalar (varsayılan mod) |
+| **NOSOUND** | Sessiz mod – ses efektleri kapalı |
+
+### Ses ve Müzik Özellikleri
+
+- **Piyano Notaları:** C4, D4, E4, F4, G4, A4, B4 notaları karoya tıklandığında çalar (RANDOM modunda)
+- **Arka Plan Müziği:** Oyun sırasında müzik çalar (SONGONLY modunda)
+- **Hata Sesi:** Yanlış tuşa basıldığında özel ses efekti (Gb4)
+
+### Görsel Özellikler
+
+- **Arka Plan Görseli:** Özelleştirilebilir arka plan resmi
+- **Pulse Animasyonları:** Tuşlara basıldığında renkli görsel geri bildirim
+- **Başarı Bildirimleri:** Good, Great, Perfect yazıları animasyonlu olarak gösterilir
+
 ---
 
 ## 2. Derleme ve Çalıştırma
@@ -33,6 +55,18 @@ Karo ekranın dışına çıkarsa veya yanlış tuşa basılırsa oyun sona erer
 - **Raylib** kütüphanesi (C:/raylib/raylib dizininde kurulu olmalı)
 - **MinGW** veya **w64devkit** derleyicisi
 - Windows işletim sistemi
+
+### Kaynak Dosyaları (resources/ klasörü)
+
+Oyunun çalışması için aşağıdaki dosyaların `resources/` klasöründe bulunması gerekir:
+
+| Dosya | Açıklama |
+| ----- | -------- |
+| `highscore.dat` | Yüksek skor verileri |
+| `party.png` | Arka plan görseli |
+| `dancemonkey.mp3` | Arka plan müziği |
+| `C4.mp3`, `D4.mp3`, `E4.mp3`, `F4.mp3`, `G4.mp3`, `A4.mp3`, `B4.mp3` | Piyano notaları |
+| `Gb4.mp3` | Hata sesi |
 
 ### Derleme Adımları
 
@@ -81,6 +115,7 @@ Tüm fonksiyonlar `Game` yapısına işaretçi alarak çalışır. Bu sayede:
 - `UpdateGame(Game *game)` – Oyun fiziğini günceller
 - `DrawFrame(Game *game)` – Ekranı çizer
 - `GameEnd(Game *game)` – Oyunu sonlandırır
+- `CheckTile(Game *game, int col)` – Karo kontrolü yapar
 
 **Amaç:** Büyük yapıyı kopyalamak yerine referans ile geçirerek bellek tasarrufu sağlamak ve değişikliklerin orijinal yapıya yansımasını garantilemek.
 
@@ -111,7 +146,7 @@ static void BubbleSort(int* arr, int len) {
 
 ## 4. Yüksek Skor Dosya Formatı
 
-Yüksek skorlar `highscore.dat` dosyasında saklanır.
+Yüksek skorlar `resources/highscore.dat` dosyasında saklanır.
 
 ### Format Özellikleri
 
@@ -148,8 +183,8 @@ Yüksek skorlar `highscore.dat` dosyasında saklanır.
 | Öğrenci | Ana Görevler |
 | --------- | ---------- |
 | **Santiago** | Dosya işlemleri (yüksek skor kaydetme/yükleme), Bubble Sort algoritması, proje yapılandırması ve klasör düzeni |
-| **Samuel** | Oyun mantığı (karo hareketi, çarpışma kontrolü), zorluk seviyeleri tasarımı, puan hesaplama sistemi |
-| **Nasim** | Grafik arayüzü (Raylib ile çizim fonksiyonları), kullanıcı girdisi yönetimi, görsel efektler |
+| **Samuel** | Oyun mantığı (karo hareketi, çarpışma kontrolü), zorluk seviyeleri tasarımı, puan hesaplama sistemi, ses sistemi |
+| **Nasim** | Grafik arayüzü (Raylib ile çizim fonksiyonları), kullanıcı girdisi yönetimi, görsel efektler, arka plan görseli |
 
 > **Not:** Proje grup çalışması olarak yürütülmüştür. Her üye birbirinin koduna katkıda bulunmuş, kod incelemesi yapmış ve geliştirme sürecinde aktif rol almıştır. Yukarıdaki tablo yalnızca ana sorumluluk alanlarını göstermektedir.
 

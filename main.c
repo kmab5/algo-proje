@@ -15,18 +15,13 @@
 #define EASY (float)(tileHeight / (baseSpeed + 15.0f))
 #define MEDIUM (float)(tileHeight / (baseSpeed + 7.5f))
 #define HARD (float)(tileHeight / baseSpeed)
-#define HIGHSCORE_FILE "highscore.dat"
+#define HIGHSCORE_FILE "resources/highscore.dat"
+#define BACKGROUND_IMG "resources/party.png"
+#define BACKGROUND_MUSIC "resources/dancemonkey.mp3"
+#define ROUND_1 55 // Round indicator | EASY < 50
+#define ROUND_2 103 // MEDIUM < 100 | HARD > 100
 
-// TODO List
-// [DONE] README :IMPORTANT
-// [DONE] Sort scores :IMPORTANT
-// [DONE] Store more (10) scores :IMPORTANT
-// [DONE] Add songs in the background - Only dance monkey
-// [DONE] Pulse the letters when clicked
-// Background image
-// Blow up tiles when clicked
-// [DONE] Add random notes to tiles - Download notes, load notes in one array (in order of Note enum), initialize with Tile, everytime it is click, play the note
-// Avatar in the corner shouting when u score a point
+// TODO
 // [WIP] Song guided tile generation - mode added, need to hardcode and sync music with the notes
 
 // Structs
@@ -35,23 +30,19 @@ typedef enum Note {
     C, D, E, F, G, A, B
 } Note;
 
-// Tile | column - 0, 1, 2, 3 | y - y coordinate | active - true/false
+// Tile | column - 0, 1, 2, 3 | y - y coordinate | active - true/false | note (Note) | sign_change
 typedef struct Tile {
     int column;
     float y;
     bool active;
     Note note;
+    bool sign_change;
 } Tile;
 
 // Game State Enum | PLAYING = 0 | PAUSE = 1 | END = 2
 typedef enum GameState {
     PLAYING, PAUSE, END
 } GameState;
-
-// Rounds | EASY = 50 | MEDIUM = 100 | HARD > 100
-typedef enum Round {
-    ROUND_1 = 50, ROUND_2 = 100
-} Round;
 
 // Pulse | life (float) | color (Color) | active (bool)
 typedef struct Pulse {
@@ -60,7 +51,7 @@ typedef struct Pulse {
     bool active;
 } Pulse;
 
-// Mode | RANDOM | GUIDED | SONGONLY | NOSOUND
+// Mode | RANDOM | GUIDED (useless) | SONGONLY | NOSOUND
 typedef enum Mode {
     RANDOM, GUIDED, SONGONLY, NOSOUND
 } Mode;
@@ -104,25 +95,22 @@ int main() {
     GameInit(&game);
     if(game.mode != NOSOUND) {
         InitAudioDevice();
-        for(Note i = C; i < 7; i++) {
-            char note;
-            if(i == C) note = 'C';
-            else if(i == D) note = 'D';
-            else if(i == E) note = 'E';
-            else if(i == F) note = 'F';
-            else if(i == G) note = 'G';
-            else if(i == A) note = 'A';
-            else note = 'B';
-            game.notes[i] = LoadSound(TextFormat("resources/%c4.mp3", note));
-        }
+        game.notes[0] = LoadSound("resources/C4.mp3");
+        game.notes[1] = LoadSound("resources/D4.mp3");
+        game.notes[2] = LoadSound("resources/E4.mp3");
+        game.notes[3] = LoadSound("resources/F4.mp3");
+        game.notes[4] = LoadSound("resources/G4.mp3");
+        game.notes[5] = LoadSound("resources/A4.mp3");
+        game.notes[6] = LoadSound("resources/B4.mp3");
         game.notes[7] = LoadSound("resources/Gb4.mp3");
-        if(game.mode == GUIDED) game.music = LoadMusicStream("resources/dancemonkey.mp3"); // Load guided music here
-        else game.music = LoadMusicStream("resources/dancemonkey.mp3");
+        if(game.mode == GUIDED) game.music = LoadMusicStream(BACKGROUND_MUSIC); // Load guided music here (useless for now)
+        else game.music = LoadMusicStream(BACKGROUND_MUSIC);
+        game.music.looping = true;
         PlayMusicStream(game.music);
     }
 
     // Background Image
-    game.bg = LoadTexture("resources/party.png");
+    game.bg = LoadTexture(BACKGROUND_IMG);
 
     // Game Loop (Oyun Dongusu)
     while (!WindowShouldClose()) {
@@ -161,12 +149,10 @@ int loadScores(Game *game) {
 
     file = fopen(HIGHSCORE_FILE, "r");
     if(file == NULL){
-        printf("No scores saved");
         return 0;
     }
 
     while(fscanf(file, "%d", &score) == 1 && cuenta < 10){
-        printf("%2d. %d \n", cuenta+1, score);
         game->scores[cuenta] = score;
         cuenta++;
     }
@@ -199,16 +185,17 @@ void updateScores(Game *game) {
 
 // Initialize game stats
 static void GameInit(Game *game) {
-    game->mode = SONGONLY;
+    game->mode = SONGONLY; // Game mode | RANDOM | SONGONLY | NOSOUND
     game->score = 0;
     game->speed = EASY;
-    game->theLine = screenHeight - tileHeight * 1.2;
+    game->theLine = screenHeight - tileHeight * 1.1;
     for(int i = 0; i < tileNumber; i++) {
         game->tiles[i] = (Tile){
             GetRandomValue(0, 3),
             -tileHeight,
             false,
-            GetRandomValue(0, 6)
+            GetRandomValue(0, 6),
+            false
         };
     }
     game->gameState = PLAYING;
@@ -225,7 +212,11 @@ static void GameInit(Game *game) {
 // Game over functions, update high score
 static void GameEnd(Game *game) {
     game->gameState = END;
-    if(game->mode != NOSOUND) SeekMusicStream(game->music, 0.0f);
+    if(game->mode != NOSOUND) {
+        PlaySound(game->notes[7]);
+        SeekMusicStream(game->music, 0.0f);
+        SetMusicPitch(game->music, 1.0f);
+    }
     game->mode = NOSOUND;
     updateScores(game);
 }
@@ -238,22 +229,17 @@ static void GenerateRandomTile(Game *game, int prev) {
         col,
         -tileHeight, // Spawn just outside the window
         true,
-        GetRandomValue(0, 6) // if guided, change here
+        GetRandomValue(0, 6) // if guided, change here (useless for now)
     };
     for(int i = 0; i < tileNumber; i++) {
         if(!game->tiles[i].active) {
-            if((game->generated < ROUND_1 && game->speed == EASY) || 
-            (game->generated < ROUND_2 && game->speed == MEDIUM) || 
-            game->speed == HARD) { // If the round & generated tiles align, spawn. Otherwise, it means a round is over -> wait until all tiles have been clicked before generating
+            if((game->generated < ROUND_1 && game->speed == EASY) || (game->generated < ROUND_2 && game->speed == MEDIUM) || game->speed == HARD) { // If the round & generated tiles align, spawn. Otherwise, it means a round is over -> wait until all tiles have been clicked before generating
                 game->tiles[i] = tile;
                 game->generated++;
                 return;
             }
         }
     }
-    // If there are no active tiles (and this function is called), increase the difficulty
-    if(game->speed == EASY) game->speed = MEDIUM;
-    else game->speed = HARD;
 }
 
 // Check if tile is close to theLine
@@ -273,17 +259,18 @@ static void CheckTile(Game* game, int col) {
         }
     }
     if(bestIndex != -1) { // We found a tile
+        int factor = (game->speed == EASY ? 1 : (game->speed == MEDIUM ? 1.5 : 2));
         if(bestDistance < (float)(tileHeight) * 0.2f || bestDistance > (float)(tileHeight) * 0.8f) {
             game->pulses[4] = (Pulse){1.1f, GOLD, true};
-            game->score += 3;
+            game->score += 3 * factor;
         } // Good: 3 pts if tile is [0, 20] & [80, 100]% close
         else if(bestDistance < (float)(tileHeight) * 0.4f || bestDistance > (float)(tileHeight) * 0.6f) {
             game->pulses[4] = (Pulse){1.1f, DARKBLUE, true};
-            game->score += 6;
+            game->score += 6 * factor;
         } // Great: 6 pts if tile is [20, 40] & [60, 80]% close
         else {
             game->pulses[4] = (Pulse){1.1f, GREEN, true};
-            game->score += 10;
+            game->score += 10 * factor;
         } // Perfect: 10 pts if tile is [40 - 60]% close
 
         game->tiles[bestIndex].active = false;
@@ -291,7 +278,6 @@ static void CheckTile(Game* game, int col) {
         game->scored++;
         if(game->mode == RANDOM || game->mode == GUIDED) PlaySound(game->notes[game->tiles[bestIndex].note]);
     } else { // End game if wrong button clicked or timing is wrong
-        if(game->mode != NOSOUND) PlaySound(game->notes[7]);
         GameEnd(game);
     }
 }
@@ -320,7 +306,7 @@ static void UpdateGame(Game *game) {
             game->pulses[1] = (Pulse){1.0f, BLUE, true};
             CheckTile(game, 1);
         } else if(IsKeyPressed(KEY_K)) { // Column 2
-            game->pulses[2] = (Pulse){1.0f, YELLOW, true};
+            game->pulses[2] = (Pulse){1.0f, PINK, true};
             CheckTile(game, 2);
         } else if(IsKeyPressed(KEY_L)) { // Column 3
             game->pulses[3] = (Pulse){1.0f, ORANGE, true};
@@ -342,11 +328,25 @@ static void UpdateGame(Game *game) {
         if(game->mode == SONGONLY || game->mode == GUIDED) UpdateMusicStream(game->music);
 
         for(int i = 0; i < tileNumber; i++) {
-            if(game->tiles[i].active)  game->tiles[i].y += game->speed;
-            if(game->tiles[i].y == 0 || // Generate tiles consecutively
-                (game->scored == ROUND_1 && game->generated == ROUND_1) || // Generate first tile when changing rounds and all tiles have been clicked
-                (game->scored == ROUND_2 && game->generated == ROUND_2)) 
-                GenerateRandomTile(game, game->tiles[i].column);
+            if(game->tiles[i].active)  {
+                game->tiles[i].sign_change = (game->tiles[i].y < 0) && (game->tiles[i].y + game->speed > 0);
+                game->tiles[i].y += game->speed;
+            }
+            // Generate tiles consecutively
+            bool consecutive = (game->tiles[i].y == 0) || game->tiles[i].sign_change;
+            // Generate first tile when changing rounds and all tiles have been clicked
+            bool round_change = (game->scored == ROUND_1 && game->generated == ROUND_1) || (game->scored == ROUND_2 && game->generated == ROUND_2);
+            if(round_change) {
+                // If there are no active tiles (and this function is called), increase the difficulty
+                if(game->speed == EASY) {
+                    game->speed = MEDIUM;
+                    if(game->mode == SONGONLY || game->mode == GUIDED) SetMusicPitch(game->music, 1.075f);
+                } else {
+                    game->speed = HARD;
+                    if(game->mode == SONGONLY || game->mode == GUIDED) SetMusicPitch(game->music, 1.15f);
+                }
+            }
+            if(consecutive || round_change) GenerateRandomTile(game, game->tiles[i].column);
         }
         CheckTilesOutsideScreen(game);
     } else { // gameState == PAUSE
