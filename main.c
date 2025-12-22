@@ -79,6 +79,7 @@ typedef struct Game {
     Pulse pulses[5];
     Sound notes[8];
     Music music;
+    Texture2D bg;
     GameState gameState;
 } Game;
 
@@ -119,6 +120,10 @@ int main() {
         else game.music = LoadMusicStream("resources/dancemonkey.mp3");
         PlayMusicStream(game.music);
     }
+
+    // Background Image
+    game.bg = LoadTexture("resources/party.png");
+
     // Game Loop (Oyun Dongusu)
     while (!WindowShouldClose()) {
         UpdateGame(&game);
@@ -129,6 +134,7 @@ int main() {
         UnloadMusicStream(game.music);
         CloseAudioDevice();
     }
+    UnloadTexture(game.bg);
     CloseWindow();
     return 0;
 }
@@ -232,7 +238,7 @@ static void GenerateRandomTile(Game *game, int prev) {
         col,
         -tileHeight, // Spawn just outside the window
         true,
-        GetRandomValue(0, 6)
+        GetRandomValue(0, 6) // if guided, change here
     };
     for(int i = 0; i < tileNumber; i++) {
         if(!game->tiles[i].active) {
@@ -354,6 +360,9 @@ static void UpdateGame(Game *game) {
 static void DrawFrame(Game *game) {
     BeginDrawing();
         ClearBackground(RAYWHITE);
+
+        // Draw background
+        DrawTexture(game->bg, 0, 0, WHITE);
 
         // Draw lines
         for(int i = 0; i < 4; i++) DrawRectangleLines(screenWidth / 4 * i, 0, screenWidth / 4, screenHeight, DARKGRAY);
