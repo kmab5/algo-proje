@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <time.h>
 #include <math.h>
 #include "raylib.h"
 
@@ -11,7 +10,7 @@
 #define columns 4 // ERROR: Unimplemented with controls (Controls only work for 4 columns)
 #define tileNumber 50 // For more optimized numbering, use (screenHeight / tileHeight) + 3 - max number of tiles in the screen + 1 above, 1 below it
 #define tileSize (screenWidth / columns)
-#define tileHeight tileSize * 1.5f // Height of tiles 1.5 * the width
+#define tileHeight (tileSize * 1.5f) // Height of tiles 1.5 * the width
 #define baseSpeed 20.0f // The higher the value the slower the pace
 #define EASY (float)(tileHeight / (baseSpeed + 10))
 #define MEDIUM (float)(tileHeight / (baseSpeed + 5))
@@ -19,11 +18,11 @@
 #define HIGHSCORE_FILE "highscore.dat"
 
 // TODO List
-// README :IMPORTANT
-// Sort scores :IMPORTANT
-// Store more (10) scores :IMPORTANT
+// [DONE] README :IMPORTANT
+// [DONE] Sort scores :IMPORTANT
+// [DONE] Store more (10) scores :IMPORTANT
 // Add songs in the background
-// Pulse the letters when clicked
+// [DONE] Pulse the letters when clicked
 // Blow up tiles when clicked
 // Add notes to tiles
 // Avatar in the corner shouting when u score a point
@@ -42,7 +41,7 @@ typedef enum GameState {
     PLAYING, PAUSE, END
 } GameState;
 
-// Rounds | EASY = 50 | MEDIUM = 100 | HARD > 50
+// Rounds | EASY = 50 | MEDIUM = 100 | HARD > 100
 typedef enum Round {
     ROUND_1 = 50, ROUND_2 = 100
 } Round;
@@ -58,6 +57,7 @@ typedef struct Pulse {
 typedef struct Game {
     int score;
     int highscore;
+    int scores[10];
     float theLine;
     Tile tiles[tileNumber];
     float speed;
@@ -74,9 +74,9 @@ static void UpdateGame(Game *game); // Update game physics
 static void DrawFrame(Game *game); // Update and draw one frame
 static void GenerateRandomTile(Game *game, int prev); // Generate tile in one of four collumns
 static void CheckTilesOutsideScreen(Game *game); // Check if each tile is outside of the screen or near the line
-int loadHighscore(void); // Load highscore
-void saveHighscore(int hightscore); // Save highscore into file
-int updateHighscore(int score, int highscore); // Update the highscore
+int loadScores(Game *game); // Load highscore
+void saveScores(Game *game); // Save highscore into file
+void updateScores(Game *game); // Update the highscore
 
 // Main entry point
 int main() {
@@ -96,35 +96,61 @@ int main() {
 }
 
 // Fonksiyonlar
+// Sort an array in place (Bubble sort)
+static void BubbleSort(int* arr, int len) {
+    for(int i = 0; i < len - 1; i++) {
+        for(int j = 0; j < len - 1; j++) {
+            if(arr[j] < arr[j+1]) {
+                int temp = arr[j];
+                arr[j] = arr[j+1];
+                arr[j+1] = temp;
+            }
+        }
+    }
+}
+
 // Load highscore
-int loadHighscore(void) {
+int loadScores(Game *game) {
     FILE *file;
-    int highscore = 0;
+    int score;
+    int cuenta = 0;
+
     file = fopen(HIGHSCORE_FILE, "r");
-    if(file != NULL){
-        fscanf(file, "%d", &highscore);
+    if(file == NULL){
+        printf("No scores saved");
+        return 0;
+    }
+
+    while(fscanf(file, "%d", &score) == 1 && cuenta < 10){
+        printf("%2d. %d \n", cuenta+1, score);
+        game->scores[cuenta] = score;
+        cuenta++;
     }
     fclose(file);
-    return highscore;
+
+    return game->scores[0];
 }
 
 // Save highscore
-void saveHighscore(int highscore) {
+void saveScores(Game *game) {
     FILE *file;
-    file = fopen (HIGHSCORE_FILE, "w");
+    file = fopen(HIGHSCORE_FILE, "w");
     if(file != NULL){
-        fprintf(file, "%d", highscore);
-        fclose(file);
+        for(int i = 0; i < 10; i++) {
+            fprintf(file, "%d\n", game->scores[i]);
+        }
     }
+    fclose(file);
 }
 
 // Update highscore
-int updateHighscore(int score, int highscore) {
-    if(score > highscore){
-        highscore = score;
-        saveHighscore(highscore);
+void updateScores(Game *game) {
+    if(game->score > game->scores[9]){
+        game->scores[9] = game->score;
+        BubbleSort(game->scores, 10);
+        game->highscore = game->scores[0];
+        saveScores(game);
     }
-    return highscore;
 }
 
 // Initialize game stats
@@ -143,14 +169,17 @@ static void GameInit(Game *game) {
     for(int i = 0; i < 5; i++) game->pulses[i] = (Pulse){0.0f, BLACK, false};
     game->generated = 0;
     game->scored = 0;
+    for(int i = 0; i < 10; i++) {
+        game->scores[i] = 0;
+    }
+    game->highscore = loadScores(game);
     GenerateRandomTile(game, GetRandomValue(0, 3));
-    game->highscore = loadHighscore();
 }
 
 // Game over functions, update high score
 static void GameEnd(Game *game) {
     game->gameState = END;
-    game->highscore = updateHighscore(game->score, game->highscore);
+    updateScores(game);
 }
 
 // Generate tile in one of four collumns
@@ -164,7 +193,9 @@ static void GenerateRandomTile(Game *game, int prev) {
     };
     for(int i = 0; i < tileNumber; i++) {
         if(!game->tiles[i].active) {
-            if((game->generated < ROUND_1 && game->speed == EASY) || (game->generated < ROUND_2 && game->speed == MEDIUM) || game->speed == HARD) { // If the round & generated tiles align, spawn. Otherwise, it means a round is over -> wait until all tiles have been clicked before generating
+            if((game->generated < ROUND_1 && game->speed == EASY) || 
+            (game->generated < ROUND_2 && game->speed == MEDIUM) || 
+            game->speed == HARD) { // If the round & generated tiles align, spawn. Otherwise, it means a round is over -> wait until all tiles have been clicked before generating
                 game->tiles[i] = tile;
                 game->generated++;
                 return;
@@ -192,7 +223,7 @@ static void CheckTile(Game* game, int col) {
             }
         }
     }
-    if(bestIndex != -1) {
+    if(bestIndex != -1) { // We found a tile
         if(bestDistance < (float)(tileHeight) * 0.2f || bestDistance > (float)(tileHeight) * 0.8f) {
             game->pulses[4] = (Pulse){1.1f, GOLD, true};
             game->score += 3;
@@ -238,7 +269,7 @@ static void UpdateGame(Game *game) {
             game->pulses[1] = (Pulse){1.0f, BLUE, true};
             CheckTile(game, 1);
         } else if(IsKeyPressed(KEY_K)) { // Column 2
-            game->pulses[2] = (Pulse){1.0f, PINK, true};
+            game->pulses[2] = (Pulse){1.0f, YELLOW, true};
             CheckTile(game, 2);
         } else if(IsKeyPressed(KEY_L)) { // Column 3
             game->pulses[3] = (Pulse){1.0f, ORANGE, true};
@@ -264,7 +295,7 @@ static void UpdateGame(Game *game) {
                 GenerateRandomTile(game, game->tiles[i].column);
         }
         CheckTilesOutsideScreen(game);
-    } else {
+    } else { // gameState == PAUSE
         if(IsKeyPressed(KEY_SPACE)) { // Resume Game
             game->gameState = PLAYING;
         }
