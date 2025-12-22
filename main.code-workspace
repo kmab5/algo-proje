@@ -13,6 +13,13 @@
             "stdio.h": "c",
             "*.m": "c",
             "stdbool.h": "c"
+        },
+        "[choicescript]": {
+            "editor.quickSuggestions": {
+                "comments": false,
+                "strings": false,
+                "other": false
+            }
         }
     }
 }
