@@ -11,9 +11,9 @@
 #define tileNumber 50 // For more optimized numbering, use (screenHeight / tileHeight) + 3 - max number of tiles in the screen + 1 above, 1 below it
 #define tileSize (screenWidth / columns)
 #define tileHeight (tileSize * 1.5f) // Height of tiles 1.5 * the width
-#define baseSpeed 20.0f // The higher the value the slower the pace
-#define EASY (float)(tileHeight / (baseSpeed + 10))
-#define MEDIUM (float)(tileHeight / (baseSpeed + 5))
+#define baseSpeed 15.0f // The higher the value the slower the pace
+#define EASY (float)(tileHeight / (baseSpeed + 15.0f))
+#define MEDIUM (float)(tileHeight / (baseSpeed + 7.5f))
 #define HARD (float)(tileHeight / baseSpeed)
 #define HIGHSCORE_FILE "highscore.dat"
 
@@ -21,12 +21,13 @@
 // [DONE] README :IMPORTANT
 // [DONE] Sort scores :IMPORTANT
 // [DONE] Store more (10) scores :IMPORTANT
-// Add songs in the background
+// [DONE] Add songs in the background - Only dance monkey
 // [DONE] Pulse the letters when clicked
+// Background image
 // Blow up tiles when clicked
 // [DONE] Add random notes to tiles - Download notes, load notes in one array (in order of Note enum), initialize with Tile, everytime it is click, play the note
 // Avatar in the corner shouting when u score a point
-// Song guided tile generation
+// [WIP] Song guided tile generation - mode added, need to hardcode and sync music with the notes
 
 // Structs
 // Note | C - 0, D, E, F, G, A, B
@@ -59,9 +60,9 @@ typedef struct Pulse {
     bool active;
 } Pulse;
 
-// Mode | RANDOM | GUIDED | NOSOUND
+// Mode | RANDOM | GUIDED | SONGONLY | NOSOUND
 typedef enum Mode {
-    RANDOM, GUIDED, NOSOUND
+    RANDOM, GUIDED, SONGONLY, NOSOUND
 } Mode;
 
 // Game instance | score (int) | highscore (int) | theLine (float - y coord) | tiles (Tiles[]) | speed (float - EASY/MEDIUM/HARD) | generated (int) | scored (int) | gameState (PLAYING/PAUSE/END) | pulses (Pulse[5] - a, s, k, l, Notification)
@@ -77,6 +78,7 @@ typedef struct Game {
     int scored;
     Pulse pulses[5];
     Sound notes[8];
+    Music music;
     GameState gameState;
 } Game;
 
@@ -113,6 +115,9 @@ int main() {
             game.notes[i] = LoadSound(TextFormat("resources/%c4.mp3", note));
         }
         game.notes[7] = LoadSound("resources/Gb4.mp3");
+        if(game.mode == GUIDED) game.music = LoadMusicStream("resources/dancemonkey.mp3"); // Load guided music here
+        else game.music = LoadMusicStream("resources/dancemonkey.mp3");
+        PlayMusicStream(game.music);
     }
     // Game Loop (Oyun Dongusu)
     while (!WindowShouldClose()) {
@@ -121,6 +126,7 @@ int main() {
     }
     if(game.mode != NOSOUND) {
         for(int i = 0; i < 8; i++) UnloadSound(game.notes[i]);
+        UnloadMusicStream(game.music);
         CloseAudioDevice();
     }
     CloseWindow();
@@ -187,7 +193,7 @@ void updateScores(Game *game) {
 
 // Initialize game stats
 static void GameInit(Game *game) {
-    game->mode = RANDOM;
+    game->mode = SONGONLY;
     game->score = 0;
     game->speed = EASY;
     game->theLine = screenHeight - tileHeight * 1.2;
@@ -213,6 +219,8 @@ static void GameInit(Game *game) {
 // Game over functions, update high score
 static void GameEnd(Game *game) {
     game->gameState = END;
+    if(game->mode != NOSOUND) SeekMusicStream(game->music, 0.0f);
+    game->mode = NOSOUND;
     updateScores(game);
 }
 
@@ -275,7 +283,7 @@ static void CheckTile(Game* game, int col) {
         game->tiles[bestIndex].active = false;
         game->tiles[bestIndex].y = -tileHeight;
         game->scored++;
-        if(game->mode != NOSOUND) PlaySound(game->notes[game->tiles[bestIndex].note]);
+        if(game->mode == RANDOM || game->mode == GUIDED) PlaySound(game->notes[game->tiles[bestIndex].note]);
     } else { // End game if wrong button clicked or timing is wrong
         if(game->mode != NOSOUND) PlaySound(game->notes[7]);
         GameEnd(game);
@@ -323,6 +331,9 @@ static void UpdateGame(Game *game) {
                 game->pulses[i].active = false;
             }
         }
+
+        // Update music
+        if(game->mode == SONGONLY || game->mode == GUIDED) UpdateMusicStream(game->music);
 
         for(int i = 0; i < tileNumber; i++) {
             if(game->tiles[i].active)  game->tiles[i].y += game->speed;
