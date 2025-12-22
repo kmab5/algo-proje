@@ -24,14 +24,14 @@
 // Add songs in the background
 // [DONE] Pulse the letters when clicked
 // Blow up tiles when clicked
-// [WIP] Add notes to tiles - Download notes, load notes in one array (in order of Note enum), initialize with Tile, everytime it is click, play the note
+// [DONE] Add random notes to tiles - Download notes, load notes in one array (in order of Note enum), initialize with Tile, everytime it is click, play the note
 // Avatar in the corner shouting when u score a point
 // Song guided tile generation
 
 // Structs
-// Note | C - 0, C#, D, D#, E, E#, F, G, G#, A, A#, B
+// Note | C - 0, D, E, F, G, A, B
 typedef enum Note {
-    C, Cs, D, Ds, E, Es, F, G, Gs, A, As, B
+    C, D, E, F, G, A, B
 } Note;
 
 // Tile | column - 0, 1, 2, 3 | y - y coordinate | active - true/false
@@ -59,8 +59,14 @@ typedef struct Pulse {
     bool active;
 } Pulse;
 
+// Mode | RANDOM | GUIDED | NOSOUND
+typedef enum Mode {
+    RANDOM, GUIDED, NOSOUND
+} Mode;
+
 // Game instance | score (int) | highscore (int) | theLine (float - y coord) | tiles (Tiles[]) | speed (float - EASY/MEDIUM/HARD) | generated (int) | scored (int) | gameState (PLAYING/PAUSE/END) | pulses (Pulse[5] - a, s, k, l, Notification)
 typedef struct Game {
+    Mode mode;
     int score;
     int highscore;
     int scores[10];
@@ -70,6 +76,7 @@ typedef struct Game {
     int generated;
     int scored;
     Pulse pulses[5];
+    Sound notes[8];
     GameState gameState;
 } Game;
 
@@ -91,11 +98,30 @@ int main() {
     SetTargetFPS(60);
     Game game;
     // Init Game (Oyun Baslat)
-    GameInit(&game);    
+    GameInit(&game);
+    if(game.mode != NOSOUND) {
+        InitAudioDevice();
+        for(Note i = C; i < 7; i++) {
+            char note;
+            if(i == C) note = 'C';
+            else if(i == D) note = 'D';
+            else if(i == E) note = 'E';
+            else if(i == F) note = 'F';
+            else if(i == G) note = 'G';
+            else if(i == A) note = 'A';
+            else note = 'B';
+            game.notes[i] = LoadSound(TextFormat("resources/%c4.mp3", note));
+        }
+        game.notes[7] = LoadSound("resources/Gb4.mp3");
+    }
     // Game Loop (Oyun Dongusu)
     while (!WindowShouldClose()) {
         UpdateGame(&game);
         DrawFrame(&game);
+    }
+    if(game.mode != NOSOUND) {
+        for(int i = 0; i < 8; i++) UnloadSound(game.notes[i]);
+        CloseAudioDevice();
     }
     CloseWindow();
     return 0;
@@ -161,6 +187,7 @@ void updateScores(Game *game) {
 
 // Initialize game stats
 static void GameInit(Game *game) {
+    game->mode = RANDOM;
     game->score = 0;
     game->speed = EASY;
     game->theLine = screenHeight - tileHeight * 1.2;
@@ -168,7 +195,8 @@ static void GameInit(Game *game) {
         game->tiles[i] = (Tile){
             GetRandomValue(0, 3),
             -tileHeight,
-            false
+            false,
+            GetRandomValue(0, 6)
         };
     }
     game->gameState = PLAYING;
@@ -195,7 +223,8 @@ static void GenerateRandomTile(Game *game, int prev) {
     Tile tile = {
         col,
         -tileHeight, // Spawn just outside the window
-        true
+        true,
+        GetRandomValue(0, 6)
     };
     for(int i = 0; i < tileNumber; i++) {
         if(!game->tiles[i].active) {
@@ -246,7 +275,9 @@ static void CheckTile(Game* game, int col) {
         game->tiles[bestIndex].active = false;
         game->tiles[bestIndex].y = -tileHeight;
         game->scored++;
+        if(game->mode != NOSOUND) PlaySound(game->notes[game->tiles[bestIndex].note]);
     } else { // End game if wrong button clicked or timing is wrong
+        if(game->mode != NOSOUND) PlaySound(game->notes[7]);
         GameEnd(game);
     }
 }
