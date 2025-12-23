@@ -1,4 +1,4 @@
-# Piano Tiles
+# [Piano Tiles](https://github.com/kmab5/algo-proje)
 
 ## Grup Üyeleri
 
@@ -182,9 +182,9 @@ Yüksek skorlar `resources/highscore.dat` dosyasında saklanır.
 
 | Öğrenci | Ana Görevler |
 | --------- | ---------- |
-| **Santiago** | Dosya işlemleri (yüksek skor kaydetme/yükleme), Bubble Sort algoritması, proje yapılandırması ve klasör düzeni |
-| **Samuel** | Oyun mantığı (karo hareketi, çarpışma kontrolü), zorluk seviyeleri tasarımı, puan hesaplama sistemi, ses sistemi |
-| **Nasim** | Grafik arayüzü (Raylib ile çizim fonksiyonları), kullanıcı girdisi yönetimi, görsel efektler, arka plan görseli |
+| **Santiago** | Dosya işlemleri (yüksek skor kaydetme/yükleme), Bubble Sort algoritması |
+| **Samuel** | Oyun mantığı, zorluk seviyeleri tasarımı, puan hesaplama sistemi, ses sistemi |
+| **Nasim** | Proje yapılandırması ve klasör düzeni, kullanıcı girdisi yönetimi, arka plan görseli |
 
 > **Not:** Proje grup çalışması olarak yürütülmüştür. Her üye birbirinin koduna katkıda bulunmuş, kod incelemesi yapmış ve geliştirme sürecinde aktif rol almıştır. Yukarıdaki tablo yalnızca ana sorumluluk alanlarını göstermektedir.
 

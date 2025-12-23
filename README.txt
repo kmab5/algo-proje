@@ -9,7 +9,7 @@ GRUP ÜYELERI
 - Santiago Ntutumu Mansogo Mikue (Öğr. No. 24253811) - Github: github.com/santi-mikue
 
 ================================================================================
-1. OYUN FİKRİ
+1. OYUN FİKRİ (https://github.com/kmab5/algo-proje)
 ================================================================================
 
 Piano Tiles, popüler mobil oyundan esinlenilmiş bir ritim oyunudur. Oyuncular 
@@ -185,13 +185,13 @@ DOSYA İŞLEMLERİ:
 | Öğrenci    | Ana Görevler                                                   |
 +------------+----------------------------------------------------------------+
 | Santiago   | Dosya işlemleri (yüksek skor kaydetme/yükleme), Bubble Sort    |
-|            | algoritması, proje yapılandırması ve klasör düzeni             |
+|            | algoritması                                                    |
 +------------+----------------------------------------------------------------+
-| Samuel     | Oyun mantığı (karo hareketi, çarpışma kontrolü), zorluk        |
-|            | seviyeleri tasarımı, puan hesaplama sistemi, ses sistemi       |
+| Samuel     | Oyun mantığı, zorluk seviyeleri tasarımı, puan hesaplama       |
+|            | sistemi, ses sistemi                                           |
 +------------+----------------------------------------------------------------+
-| Nasim      | Grafik arayüzü (Raylib ile çizim fonksiyonları), kullanıcı     |
-|            | girdisi yönetimi, görsel efektler, arka plan görseli           |
+| Nasim      | Proje yapılandırması ve klasör düzeni, kullanıcı girdisi       |
+|            | yönetimi, arka plan görseli                                    |
 +------------+----------------------------------------------------------------+
 
 Not: Proje grup çalışması olarak yürütülmüştür. Her üye birbirinin koduna 
